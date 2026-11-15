@@ -7,6 +7,12 @@
 set -eu
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 [ $# -ge 1 ] || { echo "usage: tools/sync <addon repo> [...]" >&2; exit 2; }
+# Only a committed library goes out: its tests check that MINOR was raised
+# against the commits, and an addon's copy must equal a commit here.
+if [ -n "$(git -C "$HERE" status --porcelain -- LibForeverThemes.lua Media)" ]; then
+    echo "LibForeverThemes has uncommitted changes; commit them (with MINOR raised) first" >&2
+    exit 1
+fi
 for repo in "$@"; do
     ls "$repo"/*.toc >/dev/null 2>&1 || { echo "no addon (TOC) in $repo" >&2; exit 1; }
     dest="$repo/Libs/LibForeverThemes"

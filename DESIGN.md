@@ -3,8 +3,10 @@
 The Forever addons' themes (theme ids, each theme's identity, the theme colours, textures,
 fonts and the drawing helpers) in one embedded library. Every themed Forever addon carries a
 copy under `Libs/LibForeverThemes/`; at runtime the newest loaded copy wins; every addon keeps
-working on its own (no required dependency). Phase 1 (this repository + the pilot Forever Group
-Finder) is done; phase 2 migrates the other addons by the recipe below.
+working on its own (no required dependency). The library is at **MINOR 3**. FUF, Quest Log,
+Combat Meter, Data Bar, Group Finder, Square Minimap, InfoPanel and the hub carry MINOR 2 copies;
+each is brought to MINOR 3 by §3.1 (sync + the addon-side steps). An addon not yet migrated at
+all follows §3.
 
 Repository: `~/Dokumente/ForeverThemes` (GitHub `StephanRosin/ForeverThemes`, public).
 
@@ -88,11 +90,17 @@ icon tones (hover ½ to white, off 40 % darker); the "apply to all" code; the me
 - Version: `local MINOR = n` in the file. A copy loads only if no copy with `MINOR >= n` has
   loaded. A newer copy **empties the existing table and refills it in place**, so an addon that
   did `local Lib = LibForeverThemes` before uses the newest code and data. An older copy loading
-  later returns at once.
+  later returns at once. The new copy builds everything in a table of its own and moves it into
+  the shared table only at the end of the file, `MINOR` last, then preloads its fonts: a copy
+  that throws on the way leaves the loaded one untouched (and a copy without `MINOR` is
+  replaced by any copy, `(MINOR or 0)`).
 - A change that breaks an existing caller is not allowed under the same name: add, never remove
   or change meaning; if that is ever impossible, a new global (`LibForeverThemes2`).
 - **Every change to `LibForeverThemes.lua` or `Media/` raises `MINOR`** (also media-only changes:
-  the newest copy's folder is where textures are read from). The lib test does not enforce this.
+  the newest copy's folder is where textures are read from). Enforced: the test "MINOR raised
+  with every change" fails when either differs from the commit that last changed the
+  `local MINOR` line while the line itself is unchanged (git-based; skipped outside a work tree),
+  and `tools/sync` refuses while either has uncommitted changes.
 
 ### 2.2 Media paths
 
@@ -101,7 +109,8 @@ from that: `Interface\AddOns\<folder>\Libs\LibForeverThemes\Media\…`. Each cop
 **complete** media, so the winner's folder always has every file. `Lib.Texture(name)` and
 `Lib.FONTS[i].path` / `Lib.FontPath(name)` give full paths; addons never build theme paths
 themselves. Paths are read at use (not cached at load), because a newer copy may win later in
-the loading phase.
+the loading phase. The same holds for every library table: `IDS`, `COLORS`, `THEMES`, `FONTS`
+are read through `Lib` at use, never kept in an addon's own field or local (see §4).
 
 The winning copy preloads all its fonts at load (the first-use font trap); addons drop their own
 preload of theme fonts.
@@ -109,9 +118,10 @@ preload of theme fonts.
 ### 2.3 Specs
 
 ```lua
-local Lib, T = LibForeverThemes, LibForeverThemes.THEMES
+local Lib = LibForeverThemes
 Themes.SPECS = Lib.Specs({
-    WOOD = { bodyFont = false, look = { ... }, art = { padding = 5, ornamentSize = 9 } },
+    WOOD = { bodyFont = false, look = { borderColor = Lib.THEMES.WOOD.rim, ... },
+             art = { padding = 5, ornamentSize = 9 } },
     ...
 })
 ```
@@ -119,14 +129,18 @@ Themes.SPECS = Lib.Specs({
 `Lib.THEMES[id]` is the identity: `back`, `tint`, `ornament`, `corners`, `ornamentColor`,
 `rule`/`ruleSize` (Swiss), `strip`/`wedge`/`wedgeColor` (Pitwall), `rim` (ring colour), `font`,
 `fontSizeAdd`, `bodyFont`, `iconColor`/`iconHoverColor` (Comic). `Lib.Specs(own)` returns a spec
-per id in `Lib.IDS`: the addon's table, with `__index` falling back to the identity, and the
-same for `spec.art`. Rules:
+for **CLASSIC and every id the addon has in `own`** (since MINOR 3; before, every id in
+`Lib.IDS`): the addon's table, with `__index` falling back to the identity, and the same for
+`spec.art`. A theme added to the library later has no spec in an addon that does not know it, so
+`Switch` refuses it (`not SPECS[id]`) and `Spec(id)` falls back to CLASSIC. `Lib.SpecIds(specs)`
+lists the ids with a spec in the library's order: what a theme menu offers. Rules:
 
 - Write only what differs from the identity. An addon value overrides; `false` removes an
   identity field (e.g. `bodyFont = false`).
 - Lookups are live (newest copy). `pairs(spec)` / `pairs(spec.art)` list only the addon's own
   fields — iterate `look`, never `art`, when seeding.
-- Ring colour in `look` (a setting): reference it, `borderColor = T.TECH.rim`. Seeding copies it.
+- Ring colour in `look` (a setting): `borderColor = Lib.THEMES.TECH.rim`, read once while the
+  table is built — it is a seed value, copied into the stored set; no `local T = Lib.THEMES`.
 - Old addon field names map onto library names: `band = {color, height}` → `rule`/`ruleSize`;
   `darkTitle`/`titleStrip`/`title` → `strip`; `titleWedge`/`titleWedgeColor` → `wedge`/
   `wedgeColor`; Pitwall colour `ornament`/`accent` → `wedge`. Rename in the addon's art code, or
@@ -135,16 +149,29 @@ same for `spec.art`. Rules:
 ### 2.4 Fonts
 
 `Lib.FONTS` = `{ name, path }` for the 14 font files. Names are stored in saved variables and
-never change. `Lib.FontName(name)` maps the old aliases (`IBM Plex Sans Condensed` → `… Bold`,
-`Titillium Web` → `Titillium Web SemiBold`); `Lib.FontPath(name)` resolves both; addons resolve
-font names through `Lib.FontName` in `Media.Path`, and their font dropdown shows
-`Lib.FontName(value)` so an old value still shows as selected. New seeds store the long names.
-`Friz Quadrata` and `Morpheus` are the client's (not in `Lib.FONTS`).
-LibSharedMedia registration is **not** done (open question).
+never change. Two old names are aliases: `IBM Plex Sans Condensed` → `… Bold`, `Titillium Web`
+→ `Titillium Web SemiBold`. An alias applies **only when the name is not otherwise known**:
+`Lib.FontName(name)` returns the alias's long name unless LibSharedMedia has a font of that
+name (someone's own "Titillium Web" stays theirs); `Lib.FontPath(name)` gives our file for one of
+our names, else for an alias as `FontName`, else nil. An addon's `Media.Path` therefore looks the
+name up in its own list and LibSharedMedia **first** and uses the alias only as a fallback:
+
+```lua
+function Media.Path(kind, name)
+    local path = ownOrShared(kind, name)                 -- own list, then LSM, as before
+    if not path and kind == "font" then path = Lib.FontPath(name) end
+    return path or Media.DEFAULT[kind]
+end
+```
+
+The font dropdown shows `Lib.FontName(value)` so an old value still shows as selected. New
+seeds store the long names. `Friz Quadrata` and `Morpheus` are the client's (not in
+`Lib.FONTS`). LibSharedMedia registration is **not** done (open question).
 
 ### 2.5 Colours and helpers
 
-All stateless; the addon passes the current theme and the chosen colour id (stored per addon,
+All stateless; colours they return are fresh copies (the caller may change them; the
+library's tables stay as they are). The addon passes the current theme and the chosen colour id (stored per addon,
 account wide, as today):
 
 | Function | Returns |
@@ -152,8 +179,9 @@ account wide, as today):
 | `Lib.Colors(theme)` | colour ids in order (`{}` for CLASSIC) |
 | `Lib.Colour(theme, id)` / `Lib.ValidColor(theme, id)` | entry or nil / the id, unknown → first |
 | `Lib.Paint(theme, id)` | the entry unless it is the theme's first |
-| `Lib.Back(art, theme, id)` | backdrop file name (`<back>Grey` under a tinting colour) |
-| `Lib.Tint(art, theme, id)` | `{r,g,b,a}` or nil: comic paper, or grey tinted `back/GREY_MEAN` at `art.tint` alpha |
+| `Lib.Back(art, theme, id)` | backdrop file name (`<back>Grey` under a tinting colour whose back has a grey; `art.back` as is when it is `false` or has no `GREY_MEAN`) |
+| `Lib.Tint(art, theme, id)` | `{r,g,b,a}` or nil: comic paper, or grey tinted `back/GREY_MEAN` at `art.tint` alpha (else `art.tint`) |
+| `Lib.GreyTint(back, rgb)` | `{r,g,b}` that turns `<back>Grey` into `rgb` (`rgb/GREY_MEAN[back]`, at most 1), nil for a back without grey — for addons that pick the backdrop by texture name (QL, IP) |
 | `Lib.Accent / Lib.Rim(theme, id)` | the colour's accent / ring, nil = the addon's own |
 | `Lib.WedgeColor(art, theme, id)` | the colour's wedge, else `art.wedgeColor` |
 | `Lib.DarkPaper(theme, id)` | Comic on a dark paper |
@@ -169,24 +197,44 @@ Addons keep their public helper names as thin wrappers (`Themes.Tint(art)` →
 ### 2.6 Cross-addon menu
 
 `Lib.Register(folder, entry)` writes `_G.ForeverThemes[folder] = entry` — the same table shape
-as before (`title, Current, Switch, Colors, Color, SetColor`). `Lib.Others(folder)` and
-`Lib.ApplyToAll(folder, theme, color)` replace each addon's copy. Old (unmigrated) addons and
-migrated ones read and write the same registry, so mixed installs interoperate (lib test
-"Cross-addon menu" covers an entry without colours). The InfoPanel picker needs no change.
+as before (`title, Current, Switch, Colors, Color, SetColor`). `Lib.Others(folder)` lists the
+other entries that have `Current` and `Switch` (a non-table or an entry without them is no
+addon to switch; InfoPanel's Blizzard/Bartender/Platynator entries have both and are included,
+as before), sorted by folder. `Lib.ApplyToAll(folder, theme, color)` switches each of them:
+
+- an addon that **follows the hub** (`Lib.Follows(folder)`) is skipped — the hub would switch it
+  back at the next login;
+- each `Switch`/`SetColor` runs in `pcall`: an erroring addon stops none of the others; its error
+  goes to `geterrorhandler()` as `"<title>: <error>"`;
+- returns `switched, failed` (count, list of failed titles). Callers that format only the count
+  (`L.MSG:format(Themes.ApplyToAll())`) keep working.
+
+Old (unmigrated) addons and migrated ones read and write the same registry, so mixed installs
+interoperate (lib test "Cross-addon menu"). The InfoPanel picker needs no change.
 
 ### 2.7 REVISION and seeding
 
-Theme sets, seeding and `Themes.Upgrade` stay in each addon. Seeding copies values that now come
-from the library (fonts, `fontSizeAdd`, ring colour), so the library has `SEED_REVISION` (now 0):
+Theme sets, seeding and `Themes.Upgrade` stay in each addon. Seeding copies values that come from
+the library (fonts, `fontSizeAdd`, ring colour), so the library has `SEED_REVISION` (now 0),
+raised only when a seeded value in `THEMES` changes. The stored sets keep the addon's revision and
+the library's apart:
 
 ```lua
-local OWN_REVISION = 10   -- the addon's number as before; raise it for the addon's own looks
-Themes.REVISION = OWN_REVISION + Lib.SEED_REVISION * Lib.SEED_STEP   -- SEED_STEP = 1000
+local OWN_REVISION = 10   -- raise it for the addon's own looks
+-- stored sets made anew:
+if Lib.NeedsReseed(sets, OWN_REVISION) then ...drop the themes' sets...; Lib.MarkSeeded(sets, OWN_REVISION) end
 ```
 
-With `SEED_REVISION = 0` the stored revision is unchanged, so migrating reseeds nothing. Raise
-`SEED_REVISION` only when a seeded value in `THEMES` changes. Known edge: removing the addon with
-the newest copy can lower the effective revision → one reseed (acceptable).
+`NeedsReseed` is true when `sets.revision < OWN_REVISION` or `sets.seedRevision <
+Lib.SEED_REVISION`, read **at call time** (the winning copy decides, not the copy loaded when
+the addon's file ran); `MarkSeeded` stores both. With `<`, an addon with the newest copy being
+turned off (an older copy wins) reseeds nothing, and turning it on again reseeds at most once.
+Sets stored before MINOR 3 (`revision = OWN + SEED_REVISION * 1000` = OWN, as SEED_REVISION was
+always 0) count as current: migrating reseeds nothing.
+
+Before MINOR 3 addons computed `Themes.REVISION = OWN_REVISION + Lib.SEED_REVISION *
+Lib.SEED_STEP` at file load and compared with `~=`; that depended on which copy had loaded by
+then. `SEED_STEP` stays for those copies.
 
 Drawing-time values (tints, colours, textures) need no revision; that is why the unified roundings
 show at once and the font-name change only reaches new seeds.
@@ -239,6 +287,16 @@ announces itself with `Lib.SetHub(api)`; addons ask `Lib.Hub()`:
 | `Theme()`, `Color()` | the central theme id, colour id (nil for a theme without colours) |
 | `OpenMenu(anchor)` | the theme/colour menu at a frame (Data Bar "Theme" element) |
 | `OpenOptions()` | the hub's options window |
+| `Sync()` | (optional, hub side still to add to its `SetHub` table) every following addon onto the central theme |
+
+Library helpers around it (MINOR 3):
+
+| Function | Does |
+|---|---|
+| `Lib.Follows(folder)` | `Lib.Hub()` exists and `Follows(folder)` is true |
+| `Lib.HubSync()` | calls the hub's `Sync` if there is one; after an addon's profile switch, reset or import replaced its theme |
+| `Lib.Text(key)` | the shared hub texts in the client's language (en, de, es/esMX, fr, ko; else English): `HUB_FOLLOWS` "Follows Forever Themes", `HUB_OPEN` "Open Forever Themes", `HUB_MISSING` "Theme all Forever addons at once: Forever Themes", `HUB_LINK` "Download link", `HUB_COPY` the copy prompt |
+| `Lib.ShowHubLink(text)` | the one download-link popup (`StaticPopupDialogs.LIBFOREVERTHEMES_HUB_LINK`, edit box with `Lib.HUB_URL` selected); `text` defaults to `Lib.Text("HUB_COPY")` |
 
 The api lives in `_G.ForeverThemesHub`, not in the library table (a newer copy loading after the
 hub empties that). **Texts hand-off:** while `Lib.Hub()` is non-nil the hub owns the theme font
@@ -248,6 +306,9 @@ PLAYER_LOGIN or later: every addon is loaded by then). Call guarded (`Lib.Hub an
 only in a copy that may be older than MINOR 2.
 
 ## 3. Migration recipe (one addon)
+
+For an addon that already embeds the library, §3.1 is all; the steps below are for one that
+does not yet.
 
 Run tests only as `flock /tmp/claude-1000/forever-tests.lock tests/run` (FUF: `tests/run -j 4`).
 
@@ -260,17 +321,15 @@ Run tests only as `flock /tmp/claude-1000/forever-tests.lock tests/run` (FUF: `t
 5. `Media.lua`: theme fonts from the library —
    `Media.OWN = setmetatable({ background = {}, statusbar = {} }, { __index = function(_, k) if k == "font" then return Lib.FONTS end end })`
    (statusbar textures from `Lib.Texture("<Name>Bar")` the same way where the addon offers them);
-   `if kind == "font" then name = Lib.FontName(name) end` at the top of `Media.Path`; delete the
-   font preload block. QL/IP: their backdrop textures are Media *background* entries — point
+   in `Media.Path` the font alias only as a fallback (§2.4); delete the font preload block. QL/IP: their backdrop textures are Media *background* entries — point
    them at `Lib.Texture`.
 6. Font dropdown `get`: `kind == "font" and LibForeverThemes.FontName(S(key)) or S(key)`.
 7. `Themes.lua`:
-   - `Themes.CLASSIC = Lib.CLASSIC`, `Themes.IDS = Lib.IDS` (or keep `Settings.THEMES` if the
-     settings enum needs it — then assert it equals `Lib.IDS` in a test).
-   - `REVISION` per §2.7, `OWN_REVISION` = the current number.
+   - `Themes.CLASSIC = Lib.CLASSIC`; theme lists from `Lib.SpecIds(Themes.SPECS)` at use (§2.3).
+   - Seeding per §2.7 (`Lib.NeedsReseed` / `Lib.MarkSeeded`), `OWN_REVISION` = the current number.
    - `SPECS = Lib.Specs({...})`: drop every identity field equal to the library's; keep
-     differences as overrides with a one-line why; `borderColor = T.<ID>.rim` in `look`.
-   - `Themes.COLORS = Lib.COLORS`; delete `GREY_MEAN`, comic paint tables, accent constants,
+     differences as overrides with a one-line why; `borderColor = Lib.THEMES.<ID>.rim` in `look`.
+   - Colours through `Lib.Colors`/`Lib.Colour`/`Lib.COLORS` at use; delete `GREY_MEAN`, comic paint tables, accent constants,
      `colour()`, `LATIN_CLIENTS` (use `Lib.LatinClient()`), mixing code.
    - Helpers become wrappers over §2.5, keeping their names and return shapes (CM `Backdrop`
      returns `Lib.Back(...), Lib.Tint(...)`; `Accent(color)` → `Lib.Accent(...) or color`).
@@ -287,6 +346,65 @@ Run tests only as `flock /tmp/claude-1000/forever-tests.lock tests/run` (FUF: `t
 12. README licence note → the library (as GF's). Commit with explicit paths; `.git/hooks/pre-push
     </dev/null`; no push, no release. Install; new TOC file → full game restart.
 
+### 3.1 Upgrading an embedded copy to MINOR 3
+
+Nothing breaks without these steps (an addon with a MINOR 1/2 copy keeps working when a MINOR 3
+copy wins: same names, same shapes, extra return values only); they remove the duplicated code
+and the faults the MINOR 3 helpers fix. Per addon, then its suite green, then the
+"Embedded LibForeverThemes" diff test:
+
+1. `~/Dokumente/ForeverThemes/tools/sync ~/Dokumente/<Addon>` (refuses while the library has
+   uncommitted changes).
+2. **Theme lists** — no cached library tables (§2.2): delete `Themes.IDS = Lib.IDS`,
+   `Themes.COLORS = Lib.COLORS`, `local T = Lib.THEMES` and `Settings.THEMES =
+   LibForeverThemes.IDS` (CM, IP, QL; FUF keeps its stored-by-index `Settings.THEMES` list).
+   Menus and "for each theme" loops use `Lib.SpecIds(Themes.SPECS)`; colour code reads
+   `Lib.COLORS[...]` / `Lib.Colors(...)` at use; spec tables write `Lib.THEMES.<ID>.rim`. Where a
+   settings enum needs a list at load, build it from `Lib.SpecIds` there and test that it equals
+   the SPECS' ids.
+3. **Seeding** (§2.7): replace `Themes.REVISION = OWN_REVISION + Lib.SEED_REVISION *
+   Lib.SEED_STEP` and every `sets.revision ~= Themes.REVISION` / `== Themes.REVISION` with
+   `Lib.NeedsReseed(sets, OWN_REVISION)` (negated where it was `==`) and every
+   `sets.revision = Themes.REVISION` (also in new tables `{ revision = … }`) with
+   `Lib.MarkSeeded(sets, OWN_REVISION)`. Keep `Themes.REVISION = OWN_REVISION` only if profiles,
+   exports or tools read it (QL `Profiles.lua`, FUF `tools/theme-presets-from-sv.lua`).
+   Places: CM `Themes.lua` 147/171/175/412; DB 143/227/231/391; GF 30/169/171/175/375;
+   IP `InfoPanel/Themes.lua` 185/201/204/208/455; QL 165/278/282/445; SM 114/148/151/155/393;
+   FUF `Core/Themes.lua` 197/203/207/450.
+4. **Fonts** (§2.4): in `Media.Path` drop `if kind == "font" then name = Lib.FontName(name) end`
+   before the lookup; after the own list and LibSharedMedia found nothing, try
+   `Lib.FontPath(name)`. CM 85, DB 49, GF 77, IP `InfoPanel/Media.lua` 111, QL 105, SM
+   `Infos.lua` 89 (same rule). FUF `Core/Media.lua` 35 already asks `Lib.FontPath` (no LSM
+   lookup before it): nothing to do.
+5. **Hub link and texts** (§2.12), CM, DB, GF, QL, SM, FUF: delete `HUB_URL`, the
+   `StaticPopupDialogs.<ADDON>_HUB_LINK` block and `showHubLink`; the button calls
+   `LibForeverThemes.ShowHubLink`. Labels: `Lib.Text("HUB_FOLLOWS")`, `"HUB_OPEN"`,
+   `"HUB_MISSING"`, `"HUB_LINK"` instead of the addon keys (CM/DB/GF/QL/SM `OPT_THEME_HUB`,
+   `OPT_THEME_HUB_OPEN`, `OPT_THEME_HUB_GET`, `OPT_THEME_HUB_LINK`, `POPUP_HUB_LINK`; FUF
+   `HUB_follows`, `HUB_OPEN`, `HUB_missing`, `HUB_LINK`, `POPUP_HUB_LINK`), then delete those keys
+   from every `Locales/*.lua` (FUF keeps `HUB_fonts`). If the options framework only takes locale
+   keys, set `L.<KEY> = LibForeverThemes.Text("HUB_…")` once in the addon instead. Tests that
+   checked `StaticPopupDialogs.<ADDON>_HUB_LINK` (SM `tests/run.lua` 709, FUF
+   `tests/test_theme_hub.lua` 60) check `LIBFOREVERTHEMES_HUB_LINK`.
+6. **Hub state**: replace the addon's own `Lib.Hub() and Lib.Hub().Follows(ADDON)` (e.g. CM
+   `followsHub`) with `Lib.Follows(ADDON)`. After a profile switch, reset or import call
+   `Lib.HubSync()` so a following addon gets the central theme back.
+7. **Apply to all**: nothing to change; it now skips followers and erroring addons. To name the
+   failed ones in chat, use the second return value (`local n, failed = Lib.ApplyToAll(...)`).
+   A test mock registered without `Current` no longer counts as an addon: QL
+   `tests/test_themes.lua` 580 (`FakeOther`) needs `Current = function() return "CLASSIC" end`
+   (its "apply to all" checks fail otherwise; every other suite passes unchanged with MINOR 3).
+8. **Backdrop tint by texture name** (QL `Media.lua` `ApplyBackground` ~217, IP
+   `InfoPanel/Media.lua` ~216): replace the `mean` maths with
+   `local t = c and c.back and Lib.GreyTint(art.back, c.back)` → `tex:SetTexture(t and art.grey
+   or …)`, `tex:SetVertexColor(t[1], t[2], t[3], alpha)`; the `mean` local and the three
+   `math.min` divisions go.
+9. Colours from `Lib.Tint/Accent/Rim/WedgeColor` are now copies: code that changed them in place
+   (none found) may stay; code that compared them by identity with library tables (none found)
+   must compare values.
+10. Hub repo (`Forever-Themes`): add `Sync = Hub.Sync` to its `Lib.SetHub{…}`; `Hub.Addons()`
+    may use the same filter as `Lib.Others`.
+
 ## 4. Risks
 
 - **Mixed versions in one install:** a stale copy in some addon with a higher `MINOR` than the
@@ -294,10 +412,13 @@ Run tests only as `flock /tmp/claude-1000/forever-tests.lock tests/run` (FUF: `t
 - **Partial media in a copy** would break every addon when that copy wins: copies are synced as a
   whole (`rsync --delete`), and the tests diff them.
 - **Load order:** data is read live (metatables, `Lib.FONTS` at use); code that caches lib tables
-  at load (e.g. `local FONTS = Lib.FONTS`) would keep an older copy's paths — don't.
+  at load (`local FONTS = Lib.FONTS`, `Themes.IDS = Lib.IDS`, `local T = Lib.THEMES`) keeps an
+  older copy's tables — don't (§2.2, §3.1 step 2).
 - **Font first use:** paths change when another copy wins; the winner preloads its own files.
 - **REVISION:** forgetting `SEED_REVISION` after changing a seeded field leaves old sets; changing
-  it reseeds the active theme of every migrated addon from Classic (theme tweaks lost).
+  it reseeds the active theme of every migrated addon from Classic (theme tweaks lost). Addons
+  still on the load-time `REVISION` sum (before §3.1 step 3) reseed again whenever the winning
+  copy's `SEED_REVISION` differs — so raise it only after every addon uses `NeedsReseed`.
 - **InfoPanel:** private, uncommitted foreign changes in `InfoPanel.lua`, `Locales/*.lua`,
   `tests/InfoPanel/run.lua`, `tests/InfoPanel/wowmock.lua` — the test section belongs in
   `run.lua`, so InfoPanel waits until those are committed. Its Skins move to "Forever Skins"
