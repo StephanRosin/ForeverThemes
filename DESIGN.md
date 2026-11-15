@@ -287,7 +287,7 @@ announces itself with `Lib.SetHub(api)`; addons ask `Lib.Hub()`:
 | `Theme()`, `Color()` | the central theme id, colour id (nil for a theme without colours) |
 | `OpenMenu(anchor)` | the theme/colour menu at a frame (Data Bar "Theme" element) |
 | `OpenOptions()` | the hub's options window |
-| `Sync()` | (optional, hub side still to add to its `SetHub` table) every following addon onto the central theme |
+| `Sync()` | every following addon onto the central theme (hub 1.0.2 on; an older hub lacks it, hence `Lib.HubSync`) |
 
 Library helpers around it (MINOR 3):
 
@@ -402,8 +402,8 @@ and the faults the MINOR 3 helpers fix. Per addon, then its suite green, then th
 9. Colours from `Lib.Tint/Accent/Rim/WedgeColor` are now copies: code that changed them in place
    (none found) may stay; code that compared them by identity with library tables (none found)
    must compare values.
-10. Hub repo (`Forever-Themes`): add `Sync = Hub.Sync` to its `Lib.SetHub{…}`; `Hub.Addons()`
-    may use the same filter as `Lib.Others`.
+10. Hub repo (`Forever-Themes`): sync only; its `Sync` is in `Lib.SetHub{…}` already, and
+    `Hub.Addons()` filters the registry as `Lib.Others` does.
 
 ## 4. Risks
 
