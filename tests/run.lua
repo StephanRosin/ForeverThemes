@@ -282,6 +282,14 @@ locale = "esMX"
 check("text: mexican spanish", Lib.Text("HUB_OPEN"), "Abrir Forever Themes")
 locale = "ruRU"
 check("text: else english", Lib.Text("HUB_COPY"), "Copy the link (Ctrl+C) and open it in your browser:")
+check("text: own locale over the client's", Lib.Text("HUB_FOLLOWS", "deDE"), "Folgt Forever Themes")
+check("text: own mexican spanish", Lib.Text("HUB_OPEN", "esMX"), "Abrir Forever Themes")
+locale = "frFR"
+check("text: unknown own locale, client's", Lib.Text("HUB_FOLLOWS", "auto"), "Suit Forever Themes")
+check("text: no own locale, client's", Lib.Text("HUB_FOLLOWS"), "Suit Forever Themes")
+Lib.ShowHubLink(nil, "deDE")
+check("link: prompt in own locale", StaticPopupDialogs[shown].text, "Link kopieren (Strg+C) und im Browser öffnen:")
+locale = "ruRU"
 check("link: shown", Lib.ShowHubLink(), "LIBFOREVERTHEMES_HUB_LINK")
 local dialog = StaticPopupDialogs[shown]
 check("link: its prompt", dialog.text, Lib.Text("HUB_COPY"))

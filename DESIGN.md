@@ -3,9 +3,9 @@
 The Forever addons' themes (theme ids, each theme's identity, the theme colours, textures,
 fonts and the drawing helpers) in one embedded library. Every themed Forever addon carries a
 copy under `Libs/LibForeverThemes/`; at runtime the newest loaded copy wins; every addon keeps
-working on its own (no required dependency). The library is at **MINOR 3**. FUF, Quest Log,
-Combat Meter, Data Bar, Group Finder, Square Minimap, InfoPanel and the hub carry MINOR 2 copies;
-each is brought to MINOR 3 by §3.1 (sync + the addon-side steps). An addon not yet migrated at
+working on its own (no required dependency). The library is at **MINOR 4**. FUF, Quest Log,
+Combat Meter, Data Bar, Group Finder, Square Minimap, InfoPanel and the hub carry MINOR 4 copies
+(§3.1 describes the addon-side steps for MINOR 3; MINOR 4 adds the optional `locale` argument). An addon not yet migrated at
 all follows §3.
 
 Repository: `~/Dokumente/ForeverThemes` (GitHub `StephanRosin/ForeverThemes`, public).
@@ -295,8 +295,8 @@ Library helpers around it (MINOR 3):
 |---|---|
 | `Lib.Follows(folder)` | `Lib.Hub()` exists and `Follows(folder)` is true |
 | `Lib.HubSync()` | calls the hub's `Sync` if there is one; after an addon's profile switch, reset or import replaced its theme |
-| `Lib.Text(key)` | the shared hub texts in the client's language (en, de, es/esMX, fr, ko; else English): `HUB_FOLLOWS` "Follows Forever Themes", `HUB_OPEN` "Open Forever Themes", `HUB_MISSING` "Theme all Forever addons at once: Forever Themes", `HUB_LINK` "Download link", `HUB_COPY` the copy prompt |
-| `Lib.ShowHubLink(text)` | the one download-link popup (`StaticPopupDialogs.LIBFOREVERTHEMES_HUB_LINK`, edit box with `Lib.HUB_URL` selected); `text` defaults to `Lib.Text("HUB_COPY")` |
+| `Lib.Text(key, locale)` | the shared hub texts in `locale` (the addon's own language setting; since MINOR 4), else the client's language (en, de, es/esMX, fr, ko; else English). An addon with its own language setting passes its active locale, so a German-set addon on an English client reads German: `HUB_FOLLOWS` "Follows Forever Themes", `HUB_OPEN` "Open Forever Themes", `HUB_MISSING` "Theme all Forever addons at once: Forever Themes", `HUB_LINK` "Download link", `HUB_COPY` the copy prompt |
+| `Lib.ShowHubLink(text, locale)` | the one download-link popup (`StaticPopupDialogs.LIBFOREVERTHEMES_HUB_LINK`, edit box with `Lib.HUB_URL` selected); `text` defaults to `Lib.Text("HUB_COPY", locale)` |
 
 The api lives in `_G.ForeverThemesHub`, not in the library table (a newer copy loading after the
 hub empties that). **Texts hand-off:** while `Lib.Hub()` is non-nil the hub owns the theme font
@@ -404,6 +404,10 @@ and the faults the MINOR 3 helpers fix. Per addon, then its suite green, then th
    must compare values.
 10. Hub repo (`Forever-Themes`): sync only; its `Sync` is in `Lib.SetHub{…}` already, and
     `Hub.Addons()` filters the registry as `Lib.Others` does.
+11. **MINOR 4, own language setting**: an addon whose language can differ from the client passes
+    its active locale (`"auto"` resolved to `GetLocale()`) to every `Lib.Text(key, locale)` and
+    `Lib.ShowHubLink(nil, locale)`, and tests that German on an English client reads
+    "Folgt Forever Themes".
 
 ## 4. Risks
 
