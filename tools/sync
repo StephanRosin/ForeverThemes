@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Copies the library into an addon repository, as it ships there:
+#   tools/sync ~/Dokumente/ForeverGroupFinder [...]
+# -> <repo>/Libs/LibForeverThemes/{LibForeverThemes.lua,Media/}
+# The copy is committed in the addon repo; its tests compare it with this
+# repo when it sits next to it.
+set -eu
+HERE="$(cd "$(dirname "$0")/.." && pwd)"
+[ $# -ge 1 ] || { echo "usage: tools/sync <addon repo> [...]" >&2; exit 2; }
+for repo in "$@"; do
+    ls "$repo"/*.toc >/dev/null 2>&1 || { echo "no addon (TOC) in $repo" >&2; exit 1; }
+    dest="$repo/Libs/LibForeverThemes"
+    mkdir -p "$dest"
+    cp "$HERE/LibForeverThemes.lua" "$dest/"
+    rsync -a --delete "$HERE/Media/" "$dest/Media/"
+    echo "synced $dest"
+done
