@@ -170,5 +170,14 @@ check("apply: colour only where it exists", table.concat(log, " "), "New:TEAL/PI
 log = {}
 check("apply: a theme they lack is skipped", Lib.ApplyToAll("Me", "WOOD", "OAK"), 0)
 
+section("Hub")
+check("no hub: nil", Lib.Hub(), nil)
+local hub = { Follows = function(folder) return folder == "New" end }
+Lib.SetHub(hub)
+check("hub: the one set", Lib.Hub(), hub)
+loadCopy("AddonZ", 99)
+check("hub: survives a newer copy", Lib.Hub(), hub)
+check("hub: follows", Lib.Hub().Follows("New"), true)
+
 print(("%d passed, %d failed"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)

@@ -226,6 +226,27 @@ only if the library becomes its own CurseForge project — not done, not needed 
    closed). Compare with all four channels — `ImageChops.difference(...).getbbox()` on RGBA looks
    only at alpha and reports false "identical".
 
+### 2.12 The hub (addon "Forever Themes")
+
+Optional addon `ForeverThemes` (repo `~/Dokumente/Forever-Themes`, MINOR ≥ 2): one central theme
+and colour that it applies to every registered addon through `_G.ForeverThemes` (the same
+`Switch`/`SetColor` calls as "Apply to all"), per addon "follow" (default) or "own theme". It
+announces itself with `Lib.SetHub(api)`; addons ask `Lib.Hub()`:
+
+| `Lib.Hub()` | nil without the hub, else the table below |
+|---|---|
+| `Follows(folder)` | true while the hub sets that addon's theme (show "Following Forever Themes") |
+| `Theme()`, `Color()` | the central theme id, colour id (nil for a theme without colours) |
+| `OpenMenu(anchor)` | the theme/colour menu at a frame (Data Bar "Theme" element) |
+| `OpenOptions()` | the hub's options window |
+
+The api lives in `_G.ForeverThemesHub`, not in the library table (a newer copy loading after the
+hub empties that). **Texts hand-off:** while `Lib.Hub()` is non-nil the hub owns the theme font
+on Blizzard's texts (cast bar, buff timers, Cooldown Manager, error line, damage numbers) and on
+Platynator; FUF's `BlizzardFonts`/`PlatynatorFonts` and InfoPanel's bridges stand down (check at
+PLAYER_LOGIN or later: every addon is loaded by then). Call guarded (`Lib.Hub and Lib.Hub()`)
+only in a copy that may be older than MINOR 2.
+
 ## 3. Migration recipe (one addon)
 
 Run tests only as `flock /tmp/claude-1000/forever-tests.lock tests/run` (FUF: `tests/run -j 4`).
