@@ -126,6 +126,7 @@ for _, id in ipairs(Lib.IDS) do
         if t[key] then check(id .. ": " .. key .. " file", texture(t[key]), true) end
     end
     for _, c in ipairs(Lib.COLORS[id] or {}) do
+        if c.texture then check(id .. " " .. c.id .. ": HD file", texture(c.texture), true) end
         if c.back then
             check(id .. " " .. c.id .. ": grey file", texture(t.back .. "Grey"), true)
             check(id .. " " .. c.id .. ": grey mean known", type(Lib.GREY_MEAN[t.back]), "number")
@@ -196,6 +197,29 @@ check("returned colours are copies: tint", Lib.THEMES.WOOD.tint[1], 0.5)
 check("returned colours are copies: accent", Lib.COLORS.COMIC[4].accent[1], 0.15)
 check("returned colours are copies: rim", Lib.COLORS.CONSOLE[2].rim[1], 1)
 check("returned colours are copies: wedge", Lib.THEMES.PITWALL.wedgeColor[1], 0.882)
+section("HD themes")
+local hdSpecs = Lib.Specs({ WOOD = { look = { x = { 1 } }, art = { padding = 5, back = "OwnBack" } }, COMIC = {} }, true)
+check("hd: from its base's part", hdSpecs.WOOD_HD.look.x[1], 1)
+check("hd: a copy, not the base's table", hdSpecs.WOOD_HD.look.x ~= hdSpecs.WOOD.look.x, true)
+check("hd: base's geometry", hdSpecs.WOOD_HD.art.padding, 5)
+check("hd: its own backdrop, not the base's", hdSpecs.WOOD_HD.art.back, "WoodHDOak")
+check("hd: base's font", hdSpecs.WOOD_HD.font, "Cinzel")
+check("hd: only where the base is", hdSpecs.TECH_HD, nil)
+check("hd: spec ids", table.concat(Lib.SpecIds(hdSpecs), " "), "CLASSIC WOOD COMIC WOOD_HD COMIC_HD")
+check("hd: not without asking", Lib.Specs({ WOOD = {} }).WOOD_HD, nil)
+check("hd: base theme", Lib.BaseTheme("COMIC_HD"), "COMIC")
+check("hd: base of a base", Lib.BaseTheme("COMIC"), "COMIC")
+check("hd: back first colour", Lib.Back(hdSpecs.WOOD_HD.art, "WOOD_HD", "OAK"), "WoodHDOak")
+check("hd: back other colour", Lib.Back(hdSpecs.WOOD_HD.art, "WOOD_HD", "EBONY"), "WoodHDEbony")
+check("hd: tint white", rgb(Lib.Tint(hdSpecs.WOOD_HD.art, "WOOD_HD", "EBONY")), "1,1,1,1")
+check("hd: frost keeps its alpha", Lib.THEMES.FROST_HD.tint[4], 0.85)
+check("hd: tile", Lib.THEMES.GLASS_HD.tile, Lib.TILE_HD)
+check("hd: back none (false) stays none", Lib.Back({ back = false }, "WOOD_HD", "EBONY"), false)
+check("hd: comic noir is dark", Lib.DarkPaper("COMIC_HD", "NOIR"), true)
+check("hd: comic newsprint is light", Lib.DarkPaper("COMIC_HD", "NEWSPRINT"), false)
+check("hd: comic tint is not the paper's", rgb(Lib.Tint(hdSpecs.COMIC_HD.art, "COMIC_HD", "POP")), "1,1,1,1")
+check("hd: base themes unchanged", Lib.THEMES.WOOD.back, "WoodBack")
+
 check("accent: comic yellow", rgb(Lib.Accent("COMIC", "YELLOW")), "0.15,0.45,0.95")
 check("accent: none for the first", Lib.Accent("TECH", "CYAN"), nil)
 check("rim: console amber", rgb(Lib.Rim("CONSOLE", "AMBER")), "1,0.69,0,1")

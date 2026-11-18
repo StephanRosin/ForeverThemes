@@ -3,9 +3,10 @@
 The Forever addons' themes (theme ids, each theme's identity, the theme colours, textures,
 fonts and the drawing helpers) in one embedded library. Every themed Forever addon carries a
 copy under `Libs/LibForeverThemes/`; at runtime the newest loaded copy wins; every addon keeps
-working on its own (no required dependency). The library is at **MINOR 4**. FUF, Quest Log,
-Combat Meter, Data Bar, Group Finder, Square Minimap, InfoPanel and the hub carry MINOR 4 copies
-(§3.1 describes the addon-side steps for MINOR 3; MINOR 4 adds the optional `locale` argument). An addon not yet migrated at
+working on its own (no required dependency). The library is at **MINOR 5**. FUF, Quest Log,
+Combat Meter, Data Bar, Group Finder, Square Minimap, InfoPanel and the hub carry MINOR 5 copies
+(§3.1 describes the addon-side steps for MINOR 3; MINOR 4 adds the optional `locale` argument;
+MINOR 5 the HD themes, §2.13 and §3.1 step 12). An addon not yet migrated at
 all follows §3.
 
 Repository: `~/Dokumente/ForeverThemes` (GitHub `StephanRosin/ForeverThemes`, public).
@@ -15,6 +16,7 @@ LibForeverThemes.lua      the library (one file)
 Media/Themes/*.tga        backdrops, grey backdrops, bars, ornaments, Pitwall wedge
 Media/Fonts/*.ttf         the theme fonts + OFL.txt + FONTS.txt
 tools/make_themes.py      generates Media/Themes (moved from ForeverUnitFrames/tools)
+tools/hd/                 builds the HD backdrops with MaterialCraft (build.py, recipes.py, graphs/)
 tools/sync <repo> [...]   copies the library into an addon repo
 tests/run                 the library's tests (Lua 5.1)
 ```
@@ -179,12 +181,13 @@ account wide, as today):
 | `Lib.Colors(theme)` | colour ids in order (`{}` for CLASSIC) |
 | `Lib.Colour(theme, id)` / `Lib.ValidColor(theme, id)` | entry or nil / the id, unknown → first |
 | `Lib.Paint(theme, id)` | the entry unless it is the theme's first |
-| `Lib.Back(art, theme, id)` | backdrop file name (`<back>Grey` under a tinting colour whose back has a grey; `art.back` as is when it is `false` or has no `GREY_MEAN`) |
+| `Lib.Back(art, theme, id)` | backdrop file name (an HD colour's own `texture`; `<back>Grey` under a tinting colour whose back has a grey; `art.back` as is when it is `false` or has no `GREY_MEAN`) |
 | `Lib.Tint(art, theme, id)` | `{r,g,b,a}` or nil: comic paper, or grey tinted `back/GREY_MEAN` at `art.tint` alpha (else `art.tint`) |
 | `Lib.GreyTint(back, rgb)` | `{r,g,b}` that turns `<back>Grey` into `rgb` (`rgb/GREY_MEAN[back]`, at most 1), nil for a back without grey — for addons that pick the backdrop by texture name (QL, IP) |
 | `Lib.Accent / Lib.Rim(theme, id)` | the colour's accent / ring, nil = the addon's own |
 | `Lib.WedgeColor(art, theme, id)` | the colour's wedge, else `art.wedgeColor` |
-| `Lib.DarkPaper(theme, id)` | Comic on a dark paper |
+| `Lib.DarkPaper(theme, id)` | Comic (or Comic HD) on a dark paper |
+| `Lib.BaseTheme(id)` | an HD theme's base theme, else `id` (for an addon's own rules about one theme) |
 | `Lib.IconColor(spec, theme, id, title)` | icon colour: wedge (Pitwall) / accent / title; nil for CLASSIC and Comic |
 | `Lib.IconTones(c)` | `{idle, on, hover, off}` |
 | `Lib.WEDGE_PART`, `Lib.TITLE_GAP`, `Lib.WedgeReach(h, y)` | Pitwall wedge geometry |
@@ -305,6 +308,25 @@ Platynator; FUF's `BlizzardFonts`/`PlatynatorFonts` and InfoPanel's bridges stan
 PLAYER_LOGIN or later: every addon is loaded by then). Call guarded (`Lib.Hub and Lib.Hub()`)
 only in a copy that may be older than MINOR 2.
 
+### 2.13 HD themes (MINOR 5)
+
+`WOOD_HD`, `TECH_HD`, `PARCHMENT_HD`, `RUNESTONE_HD`, `GLASS_HD`, `COMIC_HD`, `FROST_HD`, at
+the end of `Lib.IDS`. Each is its base theme's identity (`THEMES[id].base`: fonts, ornaments,
+ring, icon ink) over a finer backdrop: every colour has its own finished texture
+`Media/Themes/<Base>HD<Colour>.tga` (`c.texture`, the first colour's is `art.back`), 256 x 256
+(`Lib.TILE_HD`, `art.tile`), drawn untinted (`tint` white at the base's alpha), no grey file.
+The textures are made by `tools/hd/build.py` with MaterialCraft (Apache-2.0): numpy makes
+tileable source fields, a MaterialCraft graph per texture (written to `tools/hd/graphs/<name>.sbs`
+with its source bitmaps, to open in the app; not committed, the build makes them again) warps, colours (gradient map) and lights them (emboss: WoW's UI has no
+normal maps, so relief is baked in); each texture's mean is set to the old theme's on-screen
+brightness so texts read the same.
+
+An addon offers them only when it asks: `Lib.Specs(own, true)` makes each HD spec from a deep
+copy of the addon's part for the base (its `art.back` dropped, so the HD file is used). An older
+addon without that argument never lists them, so it never shows a name it has no text for; the
+hub's "apply to all" skips it (its `Switch` refuses an unknown theme). HD theme sets are seeded
+the first time they are chosen, like any theme; no REVISION changes.
+
 ## 3. Migration recipe (one addon)
 
 For an addon that already embeds the library, §3.1 is all; the steps below are for one that
@@ -408,6 +430,11 @@ and the faults the MINOR 3 helpers fix. Per addon, then its suite green, then th
     its active locale (`"auto"` resolved to `GetLocale()`) to every `Lib.Text(key, locale)` and
     `Lib.ShowHubLink(nil, locale)`, and tests that German on an English client reads
     "Folgt Forever Themes".
+12. **MINOR 5, HD themes**: `Lib.Specs({...}, true)`; texts `THEME_<BASE>_HD` (the base's name +
+    " HD") and `THEME_COLOR_<BASE>_HD_<COLOUR>` in every locale; a rule keyed on a theme id that
+    must hold for its HD theme too uses `Lib.BaseTheme(id)`; an addon that picks its backdrop by
+    texture name (QL, IP) draws an HD colour's file white; one that maps texture coordinates
+    itself (Square Minimap) uses `art.tile` instead of 128.
 
 ## 4. Risks
 
