@@ -3,10 +3,10 @@
 The Forever addons' themes (theme ids, each theme's identity, the theme colours, textures,
 fonts and the drawing helpers) in one embedded library. Every themed Forever addon carries a
 copy under `Libs/LibForeverThemes/`; at runtime the newest loaded copy wins; every addon keeps
-working on its own (no required dependency). The library is at **MINOR 5**. FUF, Quest Log,
-Combat Meter, Data Bar, Group Finder, Square Minimap, InfoPanel and the hub carry MINOR 5 copies
+working on its own (no required dependency). The library is at **MINOR 6**. FUF, Quest Log,
+Combat Meter, Data Bar, Group Finder, Square Minimap, InfoPanel and the hub carry MINOR 6 copies
 (§3.1 describes the addon-side steps for MINOR 3; MINOR 4 adds the optional `locale` argument;
-MINOR 5 the HD themes, §2.13 and §3.1 step 12). An addon not yet migrated at
+MINOR 5 the HD themes, §2.13 and §3.1 step 12; MINOR 6 only new HD backdrop files). An addon not yet migrated at
 all follows §3.
 
 Repository: `~/Dokumente/ForeverThemes` (GitHub `StephanRosin/ForeverThemes`, public).
@@ -16,7 +16,7 @@ LibForeverThemes.lua      the library (one file)
 Media/Themes/*.tga        backdrops, grey backdrops, bars, ornaments, Pitwall wedge
 Media/Fonts/*.ttf         the theme fonts + OFL.txt + FONTS.txt
 tools/make_themes.py      generates Media/Themes (moved from ForeverUnitFrames/tools)
-tools/hd/                 builds the HD backdrops with MaterialCraft (build.py, recipes.py, graphs/)
+tools/hd/                 builds the HD backdrops from CC0 photo scans (build.py, fields.py)
 tools/sync <repo> [...]   copies the library into an addon repo
 tests/run                 the library's tests (Lua 5.1)
 ```
@@ -315,11 +315,12 @@ the end of `Lib.IDS`. Each is its base theme's identity (`THEMES[id].base`: font
 ring, icon ink) over a finer backdrop: every colour has its own finished texture
 `Media/Themes/<Base>HD<Colour>.tga` (`c.texture`, the first colour's is `art.back`), 256 x 256
 (`Lib.TILE_HD`, `art.tile`), drawn untinted (`tint` white at the base's alpha), no grey file.
-The textures are made by `tools/hd/build.py` with MaterialCraft (Apache-2.0): numpy makes
-tileable source fields, a MaterialCraft graph per texture (written to `tools/hd/graphs/<name>.sbs`
-with its source bitmaps, to open in the app; not committed, the build makes them again) warps, colours (gradient map) and lights them (emboss: WoW's UI has no
-normal maps, so relief is baked in); each texture's mean is set to the old theme's on-screen
-brightness so texts read the same.
+The textures are made by `tools/hd/build.py` from CC0 photo scans (ambientCG, CC0 1.0; fetched
+into `~/.cache/forever-photo`, not committed, the asset ids in the script pin them): each scan is
+lit through its normal map (WoW's UI has no normal maps, so relief is baked in), graded around a
+target colour, given a designed layer (planks, slabs, vellum fibres, panels, a leaded lattice,
+print processes, circuit traces) and its mean set to the old theme's on-screen brightness so
+texts read the same. No Blizzard art.
 
 An addon offers them only when it asks: `Lib.Specs(own, true)` makes each HD spec from a deep
 copy of the addon's part for the base (its `art.back` dropped, so the HD file is used). An older
