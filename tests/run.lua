@@ -202,7 +202,15 @@ local hdSpecs = Lib.Specs({ WOOD = { look = { x = { 1 } }, art = { padding = 5, 
 check("hd: from its base's part", hdSpecs.WOOD_HD.look.x[1], 1)
 check("hd: a copy, not the base's table", hdSpecs.WOOD_HD.look.x ~= hdSpecs.WOOD.look.x, true)
 check("hd: base's geometry", hdSpecs.WOOD_HD.art.padding, 5)
-check("hd: its own backdrop, not the base's", hdSpecs.WOOD_HD.art.back, "WoodHDOak")
+check("hd: its own backdrop, not the base's", hdSpecs.WOOD_HD.art.back, "WoodHDEbony")
+for id, want in pairs({ WOOD_HD = "EBONY", TECH_HD = "CARBON", PARCHMENT_HD = "ASH", RUNESTONE_HD = "SLATE",
+    GLASS_HD = "RUBY", COMIC_HD = "NOIR", FROST_HD = "ICE" }) do
+    check("hd default " .. id, Lib.ValidColor(id, nil), want)
+    check("hd default backdrop " .. id, Lib.THEMES[id].back, Lib.COLORS[id][1].texture)
+end
+check("hd: the default keeps its accent", Lib.Accent("RUNESTONE_HD", "SLATE") ~= nil, true)
+check("hd: noir by default is dark", Lib.DarkPaper("COMIC_HD", Lib.ValidColor("COMIC_HD", nil)), true)
+check("non-HD first colour stays the own look", Lib.Paint("WOOD", "OAK"), nil)
 check("hd: base's font", hdSpecs.WOOD_HD.font, "Cinzel")
 check("hd: only where the base is", hdSpecs.TECH_HD, nil)
 check("hd: spec ids", table.concat(Lib.SpecIds(hdSpecs), " "), "CLASSIC WOOD COMIC WOOD_HD COMIC_HD")

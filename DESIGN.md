@@ -3,10 +3,10 @@
 The Forever addons' themes (theme ids, each theme's identity, the theme colours, textures,
 fonts and the drawing helpers) in one embedded library. Every themed Forever addon carries a
 copy under `Libs/LibForeverThemes/`; at runtime the newest loaded copy wins; every addon keeps
-working on its own (no required dependency). The library is at **MINOR 7**. FUF, Quest Log,
-Combat Meter, Data Bar, Group Finder, Square Minimap, InfoPanel, Loot Finder and the hub carry MINOR 7 copies
+working on its own (no required dependency). The library is at **MINOR 8**. FUF, Quest Log,
+Combat Meter, Data Bar, Group Finder, Square Minimap, InfoPanel, Loot Finder and the hub carry MINOR 8 copies
 (§3.1 describes the addon-side steps for MINOR 3; MINOR 4 adds the optional `locale` argument;
-MINOR 5 the HD themes, §2.13 and §3.1 step 12; MINOR 6 only new HD backdrop files; MINOR 7 drops Tech HD's Circuit colour, which read badly behind text). An addon not yet migrated at
+MINOR 5 the HD themes, §2.13 and §3.1 step 12; MINOR 6 only new HD backdrop files; MINOR 7 drops Tech HD's Circuit colour, which read badly behind text; MINOR 8 sets each HD theme's default colour (first in the list: Ebony, Carbon, Ash, Slate, Ruby, Noir, Ice) and keeps an HD theme's first colour painted like the others). An addon not yet migrated at
 all follows §3.
 
 Repository: `~/Dokumente/ForeverThemes` (GitHub `StephanRosin/ForeverThemes`, public).
