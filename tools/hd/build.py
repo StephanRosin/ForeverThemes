@@ -9,7 +9,7 @@ the scan twice per tile), lit from the top left through its normal map
 around a target colour; then a designed layer gives it construction
 (planks, ashlar slabs, vellum fibres and foxing, steel panels, a hairline
 grid, fractures, aurora ribbons, a leaded lattice with jewels, print
-processes, circuit traces), and the mean lands on the old theme's
+processes), and the mean lands on the old theme's
 on-screen brightness in that colour (OLD), so texts read as before.
 
     python3 tools/hd/build.py [names] [--preview DIR]
@@ -39,7 +39,7 @@ LIGHT = np.array((-0.55, 0.55, 0.63))          # from the top left (GL normals: 
 # the colour's back): what the HD variant lands on, so texts read as before.
 OLD = {
     "WoodHDOak": 0.158, "WoodHDWalnut": 0.10, "WoodHDEbony": 0.075, "WoodHDDriftwood": 0.23,
-    "TechHDCarbon": 0.076, "TechHDSteel": 0.077, "TechHDCircuit": 0.065,
+    "TechHDCarbon": 0.076, "TechHDSteel": 0.077,
     "ParchmentHDClassic": 0.339, "ParchmentHDAged": 0.24, "ParchmentHDAsh": 0.323,
     "RunestoneHDGranite": 0.201, "RunestoneHDSlate": 0.193, "RunestoneHDSandstone": 0.26,
     "RunestoneHDObsidian": 0.072,
@@ -675,73 +675,6 @@ def comic(paper_asset, paper, inks, light=0.6, stain=None, process="dots"):
     return make
 
 
-# Circuit --------------------------------------------------------------------
-
-def circuit(board=(8, 28, 14), trace=(18, 58, 30), via=(220, 200, 130), buses=9):
-    """A board: the fibreglass weave scan (Fabric004) as substrate under the
-    solder mask, bus bundles of 2 px traces on an 8 px grid with 45 degree
-    jogs, lit on their upper-left edge, pale-gold via rings at the ends."""
-    def make(name):
-        rng = np.random.default_rng(sum(map(ord, name)) * 17)
-        rgb, normal = load("Fabric004", 2)
-        sub = grade(rgb, board, 0.2, 0.6) * relief(normal, 0.6)[..., None]
-        strokes, ends, pads = [], [], []
-        cell = SIZE // 3      # one bus per cell of a 3x3 grid: spread evenly, no landmark
-        for slot in range(buses):
-            for attempt in range(30):           # a single-layer board never crosses: reroute, shorter each time
-                vertical = (slot + slot // 3 + attempt) % 2 == 1
-                x = (slot % 3) * cell + rng.integers(0, cell // 8) * 8 + 4
-                y = (slot // 3 % 3) * cell + rng.integers(0, cell // 8) * 8 + 4
-                reach = max(4, 9 - attempt // 5)
-                run1, jog, run2 = rng.integers(2, reach) * 8, rng.integers(2, 5) * 8 * rng.choice((-1, 1)), rng.integers(2, reach) * 8
-                bundle = []
-                for k in range(rng.integers(2, 5)):
-                    o = k * 8
-                    pts = [(x, y + o), (x + run1, y + o), (x + run1 + abs(jog), y + o + jog),
-                           (x + run1 + abs(jog) + run2, y + o + jog)]
-                    if vertical:
-                        pts = [(py, px) for px, py in pts]
-                    bundle.append(pts)
-                if not strokes or (wrap_draw(bundle, 4.0) * wrap_draw(strokes, 4.0)).sum() == 0:
-                    strokes += bundle
-                    ends += [pts[0] for pts in bundle]
-                    pads += [pts[-1] for pts in bundle]
-                    break
-        singles = []
-        while len(singles) < 5:                 # a second, finer density layer between the bundles
-            x, y = rng.integers(0, SIZE // 8, 2) * 8 + 4
-            run, jog = rng.integers(3, 8) * 8, rng.integers(1, 3) * 8 * rng.choice((-1, 1))
-            pts = [(x, y), (x + run, y), (x + run + abs(jog), y + jog), (x + run + abs(jog) + 24, y + jog)]
-            if rng.random() < 0.5:
-                pts = [(py, px) for px, py in pts]
-            if (wrap_draw([pts], 4.0) * wrap_draw(strokes + singles, 4.0)).sum() == 0:
-                singles.append(pts)
-        yy, xx = np.mgrid[0:SIZE, 0:SIZE].astype(float) + 0.5
-        pad = np.zeros((SIZE, SIZE))
-        for px, py in pads:                     # trace ends without a via stop on a small pad
-            dx = (xx - px + SIZE / 2) % SIZE - SIZE / 2
-            dy = (yy - py + SIZE / 2) % SIZE - SIZE / 2
-            pad = np.maximum(pad, np.clip(1.5 - np.hypot(dx, dy) + 0.5, 0, 1))
-        m = np.maximum(np.maximum(wrap_draw(strokes, 2.0), wrap_draw(singles, 1.0) * 0.6), pad)
-        lit = np.clip(m - np.roll(m, (1, 1), axis=(0, 1)), 0, 1)
-        out = sub * (1 - m[..., None]) + np.array(trace, float) / 255 * m[..., None] * (0.8 + 0.2 * relief(normal, 0.3))[..., None]
-        out = out + lit[..., None] * np.array(trace, float) / 255 * 0.4
-        yy, xx = np.mgrid[0:SIZE, 0:SIZE].astype(float) + 0.5
-        ring = np.zeros((SIZE, SIZE))
-        hole = np.zeros((SIZE, SIZE))
-        for ex, ey in ends:
-            dx = (xx - ex + SIZE / 2) % SIZE - SIZE / 2
-            dy = (yy - ey + SIZE / 2) % SIZE - SIZE / 2
-            d = np.hypot(dx, dy)
-            ring = np.maximum(ring, np.clip(1 - np.abs(d - 2.6) / 1.1, 0, 1))
-            hole = np.maximum(hole, np.clip(1.4 - d, 0, 1))
-        ring, hole = ring * 0.55, hole * 0.55
-        out = out * (1 - ring[..., None]) + np.array(via, float) / 255 * ring[..., None]
-        out = out * (1 - hole[..., None] * 0.85)
-        return land(out, name)
-    return make
-
-
 TEXTURES = {
     "WoodHDOak": material("Wood066", (66, 40, 20), sat=0.8, contrast=1.2, light=1.5, flat=0.8, sharp=0.5, layout=planks(0.4)),
     "WoodHDWalnut": material("Wood060", (46, 24, 16), sat=0.7, contrast=0.9, light=1.8, shadow_hue=(1.0, 0.88, 0.80), flat=0.6, sharp=0.4, layout=planks(1.0)),
@@ -766,7 +699,6 @@ TEXTURES = {
     "TechHDCarbon": material("Fabric004", (10, 22, 30), sat=0.2, contrast=1.0, light=2.0, sharp=0.8, repeat=2,
                              layout=hairgrid((0.25, 0.75, 0.95), 64, 0.06)),
     "TechHDSteel": material("Metal009", (20, 24, 32), sat=0.2, contrast=1.8, light=1.6, stain=("Metal046B", 0.3), sharp=0.8, layout=panels),
-    "TechHDCircuit": circuit(),
     "GlassHDCathedral": glass([(0.08, 0.22, 0.95), (0.1, 0.26, 0.9)], [(1.0, 0.8, 0.3), (0.85, 0.03, 0.08)]),
     "GlassHDSapphire": glass([(0.08, 0.22, 0.85), (0.2, 0.18, 0.9), (0.05, 0.35, 0.85)],
                              [(0.25, 0.75, 1.0), (0.7, 0.4, 1.0)], jewel_gain=1.15),

@@ -3,10 +3,10 @@
 The Forever addons' themes (theme ids, each theme's identity, the theme colours, textures,
 fonts and the drawing helpers) in one embedded library. Every themed Forever addon carries a
 copy under `Libs/LibForeverThemes/`; at runtime the newest loaded copy wins; every addon keeps
-working on its own (no required dependency). The library is at **MINOR 6**. FUF, Quest Log,
-Combat Meter, Data Bar, Group Finder, Square Minimap, InfoPanel and the hub carry MINOR 6 copies
+working on its own (no required dependency). The library is at **MINOR 7**. FUF, Quest Log,
+Combat Meter, Data Bar, Group Finder, Square Minimap, InfoPanel, Loot Finder and the hub carry MINOR 7 copies
 (§3.1 describes the addon-side steps for MINOR 3; MINOR 4 adds the optional `locale` argument;
-MINOR 5 the HD themes, §2.13 and §3.1 step 12; MINOR 6 only new HD backdrop files). An addon not yet migrated at
+MINOR 5 the HD themes, §2.13 and §3.1 step 12; MINOR 6 only new HD backdrop files; MINOR 7 drops Tech HD's Circuit colour, which read badly behind text). An addon not yet migrated at
 all follows §3.
 
 Repository: `~/Dokumente/ForeverThemes` (GitHub `StephanRosin/ForeverThemes`, public).
@@ -319,7 +319,7 @@ The textures are made by `tools/hd/build.py` from CC0 photo scans (ambientCG, CC
 into `~/.cache/forever-photo`, not committed, the asset ids in the script pin them): each scan is
 lit through its normal map (WoW's UI has no normal maps, so relief is baked in), graded around a
 target colour, given a designed layer (planks, slabs, vellum fibres, panels, a leaded lattice,
-print processes, circuit traces) and its mean set to the old theme's on-screen brightness so
+print processes) and its mean set to the old theme's on-screen brightness so
 texts read the same. No Blizzard art.
 
 An addon offers them only when it asks: `Lib.Specs(own, true)` makes each HD spec from a deep
