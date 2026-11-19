@@ -328,6 +328,21 @@ addon without that argument never lists them, so it never shows a name it has no
 hub's "apply to all" skips it (its `Switch` refuses an unknown theme). HD theme sets are seeded
 the first time they are chosen, like any theme; no REVISION changes.
 
+### 2.14 HD in the colour menus (MINOR 9)
+
+The theme menu lists no HD theme (`Lib.MenuIds`); the colour menu of a base lists its own colours,
+then its HD theme's, labelled "HD <colour>" (`Lib.MenuColors(specs, id)`: `{ theme, color, hd }`,
+values `Lib.MenuValue`/`ParseMenuValue`). Choosing an entry is `Switch(theme)` then
+`SetColor(color, theme)`. Nothing saved changes meaning: TECH_HD with CARBON is still stored, the
+registry and "apply to all" still pass HD ids, an addon with an older copy still lists HD as
+themes.
+
+A base and its HD theme share one set of settings (`Lib.SetKey(id)` = the base): a switch inside
+the family changes the theme id only, the live settings stay. Sets kept apart before are merged
+once per profile by `Lib.MergeHD(sets, current, live, customised)` (`sets.hdMerged`): the HD set
+wins when it was customised (differs from seeding it afresh from the stored CLASSIC set) or the base
+has none, else the base's stays (Stephan, 19.11.2026).
+
 ## 3. Migration recipe (one addon)
 
 For an addon that already embeds the library, §3.1 is all; the steps below are for one that

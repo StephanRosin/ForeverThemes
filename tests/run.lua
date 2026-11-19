@@ -228,6 +228,57 @@ check("hd: comic newsprint is light", Lib.DarkPaper("COMIC_HD", "NEWSPRINT"), fa
 check("hd: comic tint is not the paper's", rgb(Lib.Tint(hdSpecs.COMIC_HD.art, "COMIC_HD", "POP")), "1,1,1,1")
 check("hd: base themes unchanged", Lib.THEMES.WOOD.back, "WoodBack")
 
+section("HD in the menus (MINOR 9)")
+check("menu ids: no HD", table.concat(Lib.MenuIds(Lib.SpecIds(hdSpecs)), " "), "CLASSIC WOOD COMIC")
+local function menu(id)
+    local out = {}
+    for _, e in ipairs(Lib.MenuColors(hdSpecs, id)) do out[#out + 1] = e.theme .. ":" .. e.color .. (e.hd and "*" or "") end
+    return table.concat(out, " ")
+end
+check("menu colours: base then HD", menu("WOOD"),
+    "WOOD:OAK WOOD:WALNUT WOOD:BIRCH WOOD:CHERRY WOOD:EBONY WOOD:DRIFTWOOD WOOD_HD:EBONY* WOOD_HD:OAK* WOOD_HD:WALNUT* WOOD_HD:DRIFTWOOD*")
+check("menu colours: same from the HD theme", menu("WOOD_HD"), menu("WOOD"))
+check("menu colours: no HD where the addon has none", menu("TECH"), "")
+check("menu colours: classic none", menu("CLASSIC"), "")
+check("set key: HD on its base", Lib.SetKey("TECH_HD"), "TECH")
+check("set key: base itself", Lib.SetKey("TECH"), "TECH")
+check("menu value", Lib.MenuValue("TECH_HD", "CARBON"), "TECH_HD:CARBON")
+local mt, mc = Lib.ParseMenuValue("TECH_HD:CARBON")
+check("menu value back", mt .. "/" .. mc, "TECH_HD/CARBON")
+
+-- customised: a set with own = true
+local function own(_, set) return set.own == true end
+local sets = { WOOD = { x = 1 }, WOOD_HD = { x = 2, own = true }, TECH_HD = { x = 3 } }
+check("merge: other theme live, nothing to make live", Lib.MergeHD(sets, "PIXEL", { x = 9 }, own), nil)
+check("merge: customised HD wins", sets.WOOD.x, 2)
+check("merge: stored under the base", sets.WOOD.theme, "WOOD")
+check("merge: HD place emptied", sets.WOOD_HD, nil)
+check("merge: HD without a base set moves over", sets.TECH.x, 3)
+check("merge: once", Lib.MergeHD(sets, "PIXEL", {}, own), nil)
+check("merge: flag", sets.hdMerged, true)
+
+sets = { WOOD = { x = 1 }, WOOD_HD = { x = 2 } }
+check("merge: plain HD loses to the base", Lib.MergeHD(sets, "PIXEL", {}, own) == nil and sets.WOOD.x, 1)
+
+sets = { WOOD = { x = 1 } }
+local live = Lib.MergeHD(sets, "WOOD_HD", { x = 2, theme = "WOOD_HD" }, own)
+check("merge: on plain HD, the stored base goes live", live and live.x, 1)
+check("merge: keeping the live theme", live and live.theme, "WOOD_HD")
+check("merge: no stale base set", sets.WOOD, nil)
+
+sets = { WOOD = { x = 1 } }
+check("merge: on customised HD, it stays", Lib.MergeHD(sets, "WOOD_HD", { x = 2, own = true }, own), nil)
+check("merge: base set dropped", sets.WOOD, nil)
+
+sets = { WOOD_HD = { x = 2, own = true } }
+live = Lib.MergeHD(sets, "WOOD", { x = 1, theme = "WOOD" }, own)
+check("merge: on the base, a customised HD goes live", live and live.x, 2)
+check("merge: as the base", live and live.theme, "WOOD")
+check("merge: HD place emptied (live)", sets.WOOD_HD, nil)
+
+sets = { WOOD_HD = { x = 2 } }
+check("merge: on the base, a plain HD is dropped", Lib.MergeHD(sets, "WOOD", { x = 1 }, own) == nil and sets.WOOD_HD, nil)
+
 check("accent: comic yellow", rgb(Lib.Accent("COMIC", "YELLOW")), "0.15,0.45,0.95")
 check("accent: none for the first", Lib.Accent("TECH", "CYAN"), nil)
 check("rim: console amber", rgb(Lib.Rim("CONSOLE", "AMBER")), "1,0.69,0,1")
