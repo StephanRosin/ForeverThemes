@@ -20,7 +20,7 @@ Not to be confused with _G.ForeverThemes: that is the registry of the
 addons for the cross-addon theme menu (Lib.Register fills it).
 ---------------------------------------------------------------------------]]
 local FOLDER = ...
-local MINOR = 10
+local MINOR = 11
 
 local shared = _G.LibForeverThemes
 -- `or 0`: a copy before MINOR 3 could throw half way and leave no MINOR.
@@ -190,8 +190,7 @@ lib.THEMES.FROST_HD = hd("FROST", "FrostHDIce")
 -- its own size (stripes) instead of stretching.
 lib.THEMES.AZEROTH = { back = "AzerothParchment", tint = { 1, 1, 1, 1 }, tile = lib.TILE_HD,
     frame = "WoodHDWalnut", frameSize = 7, banner = "AzerothBanner", bannerEnd = "AzerothBannerEnd",
-    ornament = "Bracket", corners = { 1, 2, 3, 4 }, ornamentColor = { 0.91, 0.76, 0.35, 1 },
-    rim = { 0.79, 0.635, 0.29, 1 }, font = "Cinzel", bodyFont = "Alegreya" }
+    rim = { 0.79, 0.635, 0.29, 1 }, font = "Cinzel", bodyFont = "Alegreya" }   -- no corner pieces (Stephan)
 lib.THEMES.GOBLIN = { back = "GoblinSoot", tint = { 1, 1, 1, 1 }, tile = lib.TILE_HD,
     frame = "GoblinCopper", frameSize = 7, banner = "GoblinHazard", bannerTile = true,
     ornament = "Rivet", corners = { 1, 2, 3, 4 }, rim = { 0.23, 0.11, 0.05, 1 }, font = "Bungee",
