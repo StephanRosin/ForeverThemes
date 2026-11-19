@@ -356,6 +356,97 @@ def pitwall_wedge():
     return img.resize((out, out), Image.LANCZOS)
 
 
+# Azeroth and Goblin -------------------------------------------------------------
+# 256 px tiles (TILE_HD) like the HD backdrops; drawn untinted.
+HD = 256
+
+
+def azeroth_parchment():
+    """The HD Classic parchment scan lifted to a light page for dark ink
+    (the HD file is as dark as the old theme under its light text)."""
+    a = np.asarray(Image.open(os.path.join(OUT, "ParchmentHDClassic.tga")).convert("RGB"), np.float64) / 255
+    mean = a.mean(axis=(0, 1))
+    target = np.array([0.84, 0.74, 0.54])
+    out = target + (a - mean) * 1.6
+    return rgba(out[..., 0], out[..., 1], out[..., 2])
+
+
+def cloth_rows(h, top, bottom, gold, rng):
+    """A banner's cloth as rows: red from top to bottom, gold edge lines,
+    a faint weave per row. Returns h x 3."""
+    y = np.linspace(0, 1, h)[:, None]
+    rows = np.array(top) + (np.array(bottom) - np.array(top)) * y
+    rows = rows * (1 + (rng.random((h, 1)) - 0.5) * 0.08)
+    for edge in (3, 4, h - 5, h - 4):
+        rows[edge] = gold
+    rows[0:2] = rows[0:2] * 0.55
+    rows[h - 2:h] = rows[h - 2:h] * 0.55
+    return rows
+
+
+BANNER_TOP, BANNER_BOTTOM, BANNER_GOLD = (0.64, 0.16, 0.11), (0.38, 0.08, 0.06), (0.91, 0.76, 0.35)
+
+
+def azeroth_banner():
+    """The title banner's middle, the same in every column: stretched to any width."""
+    h = 64
+    rows = cloth_rows(h, BANNER_TOP, BANNER_BOTTOM, BANNER_GOLD, np.random.default_rng(301))
+    img = np.repeat(rows[:, None, :], 256, axis=1)
+    return rgba(img[..., 0], img[..., 1], img[..., 2])
+
+
+def azeroth_banner_end():
+    """The banner's left end, half as wide as high, cut in a swallowtail
+    (the addon mirrors it for the right end)."""
+    w, h, scale = 32, 64, 4
+    rows = cloth_rows(h, BANNER_TOP, BANNER_BOTTOM, BANNER_GOLD, np.random.default_rng(301))
+    img = np.repeat(rows[:, None, :], w, axis=1)
+    big = Image.new("L", (w * scale, h * scale), 0)
+    depth = w * scale * 0.55
+    ImageDraw.Draw(big).polygon([(0, 0), (w * scale, 0), (w * scale, h * scale), (0, h * scale),
+                                 (depth, h * scale / 2)], fill=255)
+    alpha = np.asarray(big.resize((w, h), Image.LANCZOS), np.float64) / 255
+    return rgba(img[..., 0], img[..., 1], img[..., 2], alpha)
+
+
+def goblin_soot():
+    """Dark sooty sheet metal, brushed, with a plate seam every half tile."""
+    rng = np.random.default_rng(311)
+    streak = tiled_blur(np.repeat(rng.random((HD, 1)), HD, axis=1), 0.6)
+    blot = noise(rng, 18, HD)
+    v = 0.11 + (streak - 0.5) * 0.05 + (blot - 0.5) * 0.06
+    v[0, :] *= 0.45
+    v[HD // 2, :] *= 0.45
+    v[1, :] *= 1.5
+    v[HD // 2 + 1, :] *= 1.5
+    return rgba(v * 1.25, v * 0.95, v * 0.7)
+
+
+def goblin_copper():
+    """Hammered copper with spots of verdigris: the frame's material."""
+    rng = np.random.default_rng(321)
+    dents = noise(rng, 3, HD)
+    broad = noise(rng, 22, HD)
+    shade = 0.78 + (dents - 0.5) * 0.35 + (broad - 0.5) * 0.25
+    r, g, b = 0.72 * shade, 0.40 * shade, 0.22 * shade
+    patina = np.clip((noise(rng, 6, HD) - 0.72) * 5, 0, 1)
+    r, g, b = mix((r, g, b), (0.28, 0.52, 0.44), patina)
+    return rgba(np.asarray(r), np.asarray(g), np.asarray(b))
+
+
+def goblin_hazard():
+    """Yellow and black warning stripes at 45 degrees, tiling both ways."""
+    size, scale = 32, 4
+    n = size * scale
+    y, x = np.mgrid[0:n, 0:n]
+    yellow = ((x + y) % n) < n / 2
+    stripes = np.where(yellow[..., None], (0.95, 0.76, 0.19), (0.10, 0.08, 0.06))
+    img = Image.fromarray((stripes * 255).astype(np.uint8), "RGB").resize((size, size), Image.LANCZOS)
+    grime = 0.88 + noise(np.random.default_rng(331), 2, size) * 0.12
+    a = np.asarray(img, np.float64) / 255 * grime[..., None]
+    return rgba(a[..., 0], a[..., 1], a[..., 2])
+
+
 THEMES = {
     "Wood": (wood, wood_bar),
     "Tech": (tech, tech_bar),
@@ -381,6 +472,12 @@ def main():
     save(rune(), "Rune.tga")
     save(seal(), "Seal.tga")
     save(pitwall_wedge(), "PitwallWedge.tga")
+    save(azeroth_parchment(), "AzerothParchment.tga")
+    save(azeroth_banner(), "AzerothBanner.tga")
+    save(azeroth_banner_end(), "AzerothBannerEnd.tga")
+    save(goblin_soot(), "GoblinSoot.tga")
+    save(goblin_copper(), "GoblinCopper.tga")
+    save(goblin_hazard(), "GoblinHazard.tga")
 
 
 if __name__ == "__main__":

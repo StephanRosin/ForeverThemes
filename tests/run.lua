@@ -122,7 +122,7 @@ local function texture(name) return exists(LIBDIR .. "/Media/Themes/" .. name ..
 for _, id in ipairs(Lib.IDS) do
     local t = Lib.THEMES[id]
     check(id .. ": has an identity", type(t), "table")
-    for _, key in ipairs({ "back", "ornament", "wedge" }) do
+    for _, key in ipairs({ "back", "ornament", "wedge", "frame", "banner", "bannerEnd" }) do
         if t[key] then check(id .. ": " .. key .. " file", texture(t[key]), true) end
     end
     for _, c in ipairs(Lib.COLORS[id] or {}) do
@@ -138,6 +138,16 @@ for _, id in ipairs(Lib.IDS) do
         check(id .. ": font known: " .. name, known, true)
     end
 end
+
+section("Framed themes (MINOR 10)")
+for _, id in ipairs({ "AZEROTH", "GOBLIN" }) do
+    local t = Lib.THEMES[id]
+    check(id .. ": a base theme in the menus", Lib.MenuIds({ id })[1], id)
+    check(id .. ": frame wide enough to see", t.frameSize >= 4, true)
+    check(id .. ": its colour draws its own file", Lib.Back(t, id, Lib.Colors(id)[1]), Lib.COLORS[id][1].texture)
+end
+check("AZEROTH: banner stretches with ends", Lib.THEMES.AZEROTH.bannerEnd ~= nil and not Lib.THEMES.AZEROTH.bannerTile, true)
+check("GOBLIN: stripes repeat", Lib.THEMES.GOBLIN.bannerTile, true)
 
 section("Colours")
 for _, id in ipairs(Lib.IDS) do
