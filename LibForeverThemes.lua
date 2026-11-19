@@ -20,7 +20,7 @@ Not to be confused with _G.ForeverThemes: that is the registry of the
 addons for the cross-addon theme menu (Lib.Register fills it).
 ---------------------------------------------------------------------------]]
 local FOLDER = ...
-local MINOR = 11
+local MINOR = 12
 
 local shared = _G.LibForeverThemes
 -- `or 0`: a copy before MINOR 3 could throw half way and leave no MINOR.
@@ -499,8 +499,8 @@ lib.COLORS = {
         colour("SILVER", nil, nil, nil, { 0.788, 0.808, 0.839, 1 }),
     },
     -- One colour each so far: the backdrop file (drawn as it is).
-    AZEROTH = { { id = "PARCHMENT", texture = "AzerothParchment" } },
-    GOBLIN = { { id = "SOOT", texture = "GoblinSoot" } },
+    AZEROTH = { { id = "PARCHMENT", texture = "AzerothParchment", accent = { 1, 0.82, 0 } } },   -- gold on the red banner
+    GOBLIN = { { id = "SOOT", texture = "GoblinSoot", accent = { 0.95, 0.76, 0.19 } } },
 }
 
 -- The mean grey of each <back>Grey.tga: a colour's back is drawn as vertex
