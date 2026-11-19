@@ -140,13 +140,13 @@ for _, id in ipairs(Lib.IDS) do
 end
 
 section("Framed themes (MINOR 10)")
-for _, id in ipairs({ "AZEROTH", "GOBLIN" }) do
+for _, id in ipairs({ "GOBLIN" }) do
     local t = Lib.THEMES[id]
     check(id .. ": a base theme in the menus", Lib.MenuIds({ id })[1], id)
     check(id .. ": frame wide enough to see", t.frameSize >= 4, true)
     check(id .. ": its colour draws its own file", Lib.Back(t, id, Lib.Colors(id)[1]), Lib.COLORS[id][1].texture)
 end
-check("AZEROTH: banner stretches with ends", Lib.THEMES.AZEROTH.bannerEnd ~= nil and not Lib.THEMES.AZEROTH.bannerTile, true)
+check("Azeroth gone (Stephan)", Lib.THEMES.AZEROTH, nil)
 check("GOBLIN: stripes repeat", Lib.THEMES.GOBLIN.bannerTile, true)
 
 section("Colours")
